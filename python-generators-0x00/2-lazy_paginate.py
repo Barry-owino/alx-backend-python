@@ -9,7 +9,7 @@ def paginate_users(page_size, offset):
         connection = mysql.connector.connect(
             host='localhost',
             user='root',
-            password='your_mysql_password',  # Replace with your password
+            password='Legionnaire@27',
             database='ALX_prodev'
         )
 
@@ -42,7 +42,7 @@ def lazy_paginate(page_size):
 
 if __name__ == "__main__":
     print("📄 Lazily loading users in pages...\n")
-    for page in lazy_paginate(5):  # You can change 5 to any page size you want
+    for page in lazy_paginate(5)
         print("🔹 New Page:")
         for user in page:
             print(f"🧑 {user['name']} | 📧 {user['email']} | 🎂 {user['age']}")
