@@ -38,7 +38,7 @@ async def async_fetch_users(db_name='users.db'):
     """
     Asynchronously fetches all users from the database.
     """
-    print(f"[{asyncio.current_task().get_name()}] Fetching all users...")
+    print(f"[{asyncio.current_task().get_name()}] Fetching all users from {db_name}...")
     async with aiosqlite.connect(db_name) as db:
         async with db.execute("SELECT id, name, email, age FROM users") as cursor:
             users = await cursor.fetchall()
@@ -49,7 +49,7 @@ async def async_fetch_older_users(age_threshold=40, db_name='users.db'):
     """
     Asynchronously fetches users older than a specified age from the database.
     """
-    print(f"[{asyncio.current_task().get_name()}] Fetching users older than {age_threshold}...")
+    print(f"[{asyncio.current_task().get_name()}] Fetching users older than {age_threshold} from {db_name}...")
     async with aiosqlite.connect(db_name) as db:
         async with db.execute("SELECT id, name, email, age FROM users WHERE age > ?", (age_threshold,)) as cursor:
             older_users = await cursor.fetchall()
@@ -63,8 +63,10 @@ async def fetch_concurrently():
     print("\n--- Starting concurrent database fetches ---")
     # asyncio.gather runs the coroutines concurrently.
     # It returns results in the order the coroutines were passed.
-    all_users_task = async_fetch_users()
-    older_users_task = async_fetch_older_users(age_threshold=40)
+    
+    # Explicitly passing db_name for clarity
+    all_users_task = async_fetch_users(db_name='users.db')
+    older_users_task = async_fetch_older_users(age_threshold=40, db_name='users.db') # Explicitly passed db_name
 
     # Assign names to tasks for clearer logging
     all_users_task.__name__ = "FetchAllUsersTask"
@@ -88,4 +90,3 @@ async def fetch_concurrently():
 # --- Run the concurrent fetch ---
 if __name__ == "__main__":
     asyncio.run(fetch_concurrently())
-
