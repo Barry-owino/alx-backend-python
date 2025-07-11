@@ -1,0 +1,164 @@
+import sqlite3
+import functools
+
+def with_db_connection(func):
+    """
+    Decorator that opens a database connection, passes it to the decorated function,
+    and ensures the connection is closed afterward, even if errors occur.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        conn = None
+        try:
+            conn = sqlite3.connect('users.db')
+            # Pass the connection as the first argument to the decorated function
+            result = func(conn, *args, **kwargs)
+            return result
+        except sqlite3.Error as e:
+            print(f"Database error: {e}")
+            # Optionally re-raise the exception if you want it to propagate
+            raise
+        finally:
+            if conn:
+                conn.close()
+                # print("Database connection closed.") # For debugging/logging
+    return wrapper
+
+def transactional(func):
+    """
+    Decorator that manages database transactions.
+    It assumes the decorated function receives a 'conn' (connection) object
+    as its first argument. If the function executes successfully, the transaction
+    is committed; otherwise, it is rolled back.
+    """
+    @functools.wraps(func)
+    def wrapper(conn, *args, **kwargs): # 'conn' is expected as the first arg
+        try:
+            result = func(conn, *args, **kwargs)
+            conn.commit() # Commit changes if function executes successfully
+            print("Transaction committed successfully.")
+            return result
+        except Exception as e:
+            if conn:
+                conn.rollback() # Rollback changes if an error occurs
+                print(f"Transaction rolled back due to error: {e}")
+            raise # Re-raise the original exception
+    return wrapper
+
+# --- Database Setup (for demonstration purposes) ---
+# This part creates a dummy SQLite database and a 'users' table
+# to make the example runnable.
+try:
+    conn_setup = sqlite3.connect('users.db')
+    cursor_setup = conn_setup.cursor()
+    cursor_setup.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL
+        )
+    ''')
+    # Insert sample data, ignoring if already exists
+    cursor_setup.execute("INSERT OR IGNORE INTO users (id, name, email) VALUES (1, 'John Doe', 'john@example.com')")
+    cursor_setup.execute("INSERT OR IGNORE INTO users (id, name, email) VALUES (2, 'Jane Smith', 'jane@example.com')")
+    cursor_setup.execute("INSERT OR IGNORE INTO users (id, name, email) VALUES (3, 'Peter Jones', 'peter@example.com')")
+    conn_setup.commit()
+except sqlite3.Error as e:
+    print(f"Database setup error: {e}")
+finally:
+    if conn_setup:
+        conn_setup.close()
+
+# --- Decorated Functions ---
+
+@with_db_connection
+def get_user_by_id(conn, user_id):
+    """
+    Fetches a user from the database by their ID using the provided connection.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    return cursor.fetchone()
+
+@with_db_connection
+@transactional
+def update_user_email(conn, user_id, new_email):
+    """
+    Updates a user's email. This function is wrapped in a transaction.
+    """
+    cursor = conn.cursor()
+    print(f"Attempting to update user ID {user_id} email to {new_email}...")
+    cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user_id))
+    if cursor.rowcount == 0:
+        raise ValueError(f"User with ID {user_id} not found or email is already {new_email}.")
+    print(f"Successfully executed UPDATE for user ID {user_id}.")
+
+
+@with_db_connection
+@transactional
+def create_user_and_fail(conn, name, email, should_fail=True):
+    """
+    Attempts to create a new user and demonstrates a rollback if should_fail is True.
+    """
+    cursor = conn.cursor()
+    print(f"Attempting to insert user: {name} ({email})...")
+    cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", (name, email))
+    print(f"Successfully executed INSERT for user: {name}.")
+    
+    if should_fail:
+        print("Simulating an error to trigger rollback...")
+        raise ValueError("Simulated error during transaction!")
+    else:
+        print("No simulated error, transaction should commit.")
+
+
+# --- Demonstration of Usage ---
+
+print("--- Fetching user by ID with automatic connection handling ---")
+user = get_user_by_id(user_id=1)
+print(f"Fetched User by ID 1: {user}")
+
+print("\n--- Updating user's email (successful transaction) ---")
+try:
+    update_user_email(user_id=1, new_email='Crawford_Cartwright@hotmail.com')
+    print("Email update operation completed.")
+except Exception as e:
+    print(f"Email update operation failed: {e}")
+
+print("\n--- Verify updated email ---")
+user_updated = get_user_by_id(user_id=1)
+print(f"User ID 1 after update: {user_updated}")
+
+print("\n--- Attempting to update non-existent user's email (transactional rollback expected) ---")
+try:
+    update_user_email(user_id=999, new_email='nonexistent@example.com')
+    print("Email update operation completed (unexpectedly).")
+except Exception as e:
+    print(f"Email update operation failed as expected: {e}")
+
+print("\n--- Verify non-existent user was not created/affected ---")
+user_non_existent = get_user_by_id(user_id=999)
+print(f"User ID 999 after failed update attempt: {user_non_existent}")
+
+print("\n--- Demonstrating transactional rollback with simulated error ---")
+try:
+    create_user_and_fail(name="Ephemeral User", email="ephemeral@example.com", should_fail=True)
+    print("User creation operation completed (unexpectedly).")
+except Exception as e:
+    print(f"User creation operation failed as expected: {e}")
+
+print("\n--- Verify Ephemeral User was NOT created (due to rollback) ---")
+ephemeral_user = get_user_by_id(user_id=4) # Assuming ID 4 would be next if committed
+print(f"Ephemeral User after rollback: {ephemeral_user}") # Should be None if rolled back
+
+print("\n--- Demonstrating transactional commit without error ---")
+try:
+    create_user_and_fail(name="Persistent User", email="persistent@example.com", should_fail=False)
+    print("Persistent User creation operation completed successfully.")
+except Exception as e:
+    print(f"Persistent User creation operation failed: {e}")
+
+print("\n--- Verify Persistent User WAS created (due to commit) ---")
+persistent_user = get_user_by_id(user_id=4) # Assuming ID 4 would be next if committed
+print(f"Persistent User after commit: {persistent_user}") # Should show the user if committed
+
