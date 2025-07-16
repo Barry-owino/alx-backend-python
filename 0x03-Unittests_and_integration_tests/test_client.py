@@ -1,38 +1,58 @@
 #!/usr/bin/env python3
 """
-client.py
-A module containing the GithubOrgClient class for interacting with the GitHub API.
+test_client.py
+Unit tests for the GithubOrgClient class in the client module.
 """
 
-from typing import Dict
-from utils import get_json # Import get_json from the utils module
+import unittest
+from parameterized import parameterized
+import unittest.mock
+from typing import Dict, Tuple, Any
 
-class GithubOrgClient:
-    """
-    Client for interacting with the public GitHub Organizations API.
+# Import the client module containing the GithubOrgClient class
+import client
 
-    This class provides methods to retrieve information about GitHub organizations.
+class TestGithubOrgClient(unittest.TestCase):
     """
-    def __init__(self, org_name: str) -> None:
+    Tests for the GithubOrgClient class, specifically focusing on its 'org' method.
+    """
+
+    @parameterized.expand([
+        ("google", {"login": "google", "id": 1, "public_repos": 100}),
+        ("abc", {"login": "abc", "id": 2, "public_repos": 50}),
+    ])
+    @unittest.mock.patch('client.get_json') # Patch the get_json function within the client module
+    def test_org(self, org_name: str, test_payload: Dict, mock_get_json: unittest.mock.Mock) -> None:
         """
-        Initializes a GithubOrgClient instance.
+        Tests that GithubOrgClient.org returns the correct value
+        and that client.get_json is called exactly once with the expected URL.
 
         Args:
-            org_name (str): The name of the GitHub organization (e.g., "google", "holbertonschool").
+            org_name (str): The organization name to test.
+            test_payload (Dict): The dictionary payload that mock_get_json should return.
+            mock_get_json (unittest.mock.Mock): The mocked get_json function.
         """
-        self._org_name = org_name
+        # Configure the mock object's return value
+        # The mock_get_json (which replaces client.get_json) should return an object
+        # whose .json() method returns test_payload.
+        mock_response = unittest.mock.Mock()
+        mock_response.json.return_value = test_payload
+        mock_get_json.return_value = mock_response
 
-    def org(self) -> Dict:
-        """
-        Retrieves the organization's public information from GitHub.
+        # Instantiate the client with the current organization name
+        github_client = client.GithubOrgClient(org_name)
 
-        Constructs the API URL for the organization and uses utils.get_json
-        to fetch the data.
+        # Call the method under test
+        result = github_client.org()
 
-        Returns:
-            Dict: A dictionary containing the organization's JSON data.
-        """
-        url = f"https://api.github.com/orgs/{self._org_name}"
-        return get_json(url)
+        # Define the expected URL that get_json should have been called with
+        expected_url = f"https://api.github.com/orgs/{org_name}"
 
-# No __main__ block needed for client.py as it's designed to be imported.
+        # Test that the mocked get_json was called exactly once with the expected URL
+        mock_get_json.assert_called_once_with(expected_url)
+
+        # Test that the output of GithubOrgClient.org is equal to the test_payload
+        self.assertEqual(result, test_payload)
+
+if __name__ == '__main__':
+    unittest.main()
