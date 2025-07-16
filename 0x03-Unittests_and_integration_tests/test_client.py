@@ -18,8 +18,8 @@ class TestGithubOrgClient(unittest.TestCase):
     """
 
     @parameterized.expand([
-        ("google", {"login": "google", "id": 1, "public_repos": 100}),
-        ("abc", {"login": "abc", "id": 2, "public_repos": 50}),
+        ("google", {"login": "google", "id": 1, "public_repos": 100, "repos_url": "https://api.github.com/orgs/google/repos"}),
+        ("abc", {"login": "abc", "id": 2, "public_repos": 50, "repos_url": "https://api.github.com/orgs/abc/repos"}),
     ])
     @unittest.mock.patch('client.get_json') # Patch the get_json function within the client module
     def test_org(self, org_name: str, test_payload: Dict, mock_get_json: unittest.mock.Mock) -> None:
@@ -54,5 +54,30 @@ class TestGithubOrgClient(unittest.TestCase):
         # Test that the output of GithubOrgClient.org is equal to the test_payload
         self.assertEqual(result, test_payload)
 
+    def test_public_repos_url(self) -> None:
+        """
+        Tests that GithubOrgClient._public_repos_url returns the expected URL
+        based on a mocked org payload.
+        """
+        # Define a known payload that GithubOrgClient.org should return
+        test_payload = {"repos_url": "https://api.github.com/orgs/test_org/repos"}
+
+        # Use patch as a context manager to mock client.GithubOrgClient.org
+        with unittest.mock.patch('client.GithubOrgClient.org', new_callable=unittest.mock.PropertyMock) as mock_org:
+            # Configure the mocked org property to return our test_payload
+            mock_org.return_value = test_payload
+
+            # Instantiate GithubOrgClient (the org_name doesn't matter here as org() is mocked)
+            github_client = client.GithubOrgClient("some_org")
+
+            # Test that the result of _public_repos_url is the expected one
+            # We access it as a property, not a method
+            self.assertEqual(github_client._public_repos_url, test_payload["repos_url"])
+
+            # Verify that the org property was called exactly once
+            mock_org.assert_called_once()
+
+
 if __name__ == '__main__':
     unittest.main()
+
