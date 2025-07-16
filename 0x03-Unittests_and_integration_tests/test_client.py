@@ -1,83 +1,63 @@
 #!/usr/bin/env python3
 """
-test_client.py
-Unit tests for the GithubOrgClient class in the client module.
+client.py
+A module containing the GithubOrgClient class for interacting with the GitHub API.
 """
 
-import unittest
-from parameterized import parameterized
-import unittest.mock
-from typing import Dict, Tuple, Any
+from typing import Dict, List, Any
+from utils import get_json # Import get_json from the utils module
 
-# Import the client module containing the GithubOrgClient class
-import client
-
-class TestGithubOrgClient(unittest.TestCase):
+class GithubOrgClient:
     """
-    Tests for the GithubOrgClient class, specifically focusing on its 'org' method.
-    """
+    Client for interacting with the public GitHub Organizations API.
 
-    @parameterized.expand([
-        ("google", {"login": "google", "id": 1, "public_repos": 100, "repos_url": "https://api.github.com/orgs/google/repos"}),
-        ("abc", {"login": "abc", "id": 2, "public_repos": 50, "repos_url": "https://api.github.com/orgs/abc/repos"}),
-    ])
-    @unittest.mock.patch('client.get_json') # Patch the get_json function within the client module
-    def test_org(self, org_name: str, test_payload: Dict, mock_get_json: unittest.mock.Mock) -> None:
+    This class provides methods to retrieve information about GitHub organizations
+    and their public repositories.
+    """
+    def __init__(self, org_name: str) -> None:
         """
-        Tests that GithubOrgClient.org returns the correct value
-        and that client.get_json is called exactly once with the expected URL.
+        Initializes a GithubOrgClient instance.
 
         Args:
-            org_name (str): The organization name to test.
-            test_payload (Dict): The dictionary payload that mock_get_json should return.
-            mock_get_json (unittest.mock.Mock): The mocked get_json function.
+            org_name (str): The name of the GitHub organization (e.g., "google", "holbertonschool").
         """
-        # Configure the mock object's return value
-        # The mock_get_json (which replaces client.get_json) should return an object
-        # whose .json() method returns test_payload.
-        mock_response = unittest.mock.Mock()
-        mock_response.json.return_value = test_payload
-        mock_get_json.return_value = mock_response
+        self._org_name = org_name
 
-        # Instantiate the client with the current organization name
-        github_client = client.GithubOrgClient(org_name)
-
-        # Call the method under test
-        result = github_client.org()
-
-        # Define the expected URL that get_json should have been called with
-        expected_url = f"https://api.github.com/orgs/{org_name}"
-
-        # Test that the mocked get_json was called exactly once with the expected URL
-        mock_get_json.assert_called_once_with(expected_url)
-
-        # Test that the output of GithubOrgClient.org is equal to the test_payload
-        self.assertEqual(result, test_payload)
-
-    def test_public_repos_url(self) -> None:
+    def org(self) -> Dict:
         """
-        Tests that GithubOrgClient._public_repos_url returns the expected URL
-        based on a mocked org payload.
+        Retrieves the organization's public information from GitHub.
+
+        Constructs the API URL for the organization and uses utils.get_json
+        to fetch the data.
+
+        Returns:
+            Dict: A dictionary containing the organization's JSON data.
         """
-        # Define a known payload that GithubOrgClient.org should return
-        test_payload = {"repos_url": "https://api.github.com/orgs/test_org/repos"}
+        url = f"https://api.github.com/orgs/{self._org_name}"
+        return get_json(url)
 
-        # Use patch as a context manager to mock client.GithubOrgClient.org
-        with unittest.mock.patch('client.GithubOrgClient.org', new_callable=unittest.mock.PropertyMock) as mock_org:
-            # Configure the mocked org property to return our test_payload
-            mock_org.return_value = test_payload
+    @property
+    def _public_repos_url(self) -> str:
+        """
+        Retrieves the URL for public repositories from the organization's data.
 
-            # Instantiate GithubOrgClient (the org_name doesn't matter here as org() is mocked)
-            github_client = client.GithubOrgClient("some_org")
+        This is a property that accesses the 'repos_url' key from the
+        organization's data obtained via the 'org' method.
 
-            # Test that the result of _public_repos_url is the expected one
-            # We access it as a property, not a method
-            self.assertEqual(github_client._public_repos_url, test_payload["repos_url"])
+        Returns:
+            str: The URL to the organization's public repositories.
+        """
+        return self.org()["repos_url"]
 
-            # Verify that the org property was called exactly once
-            mock_org.assert_called_once()
+    def public_repos(self) -> List[str]:
+        """
+        Retrieves a list of public repository names for the organization.
 
+        Fetches the repository data using the _public_repos_url property and
+        then extracts the 'name' of each repository.
 
-if __name__ == '__main__':
-    unittest.main()
-
+        Returns:
+            List[str]: A list of names of the public repositories.
+        """
+        repos_payload = get_json(self._public_repos_url)
+        return [repo["name"] for repo in repos_payload]
