@@ -6,6 +6,7 @@ nested map access and a simple data processing class.
 """
 
 from typing import Mapping, Sequence, Any, Dict, List
+import requests # Added import for requests
 
 def access_nested_map(nested_map: Mapping, path: Sequence) -> Any:
     """
@@ -77,6 +78,24 @@ class DataProcessor:
             all_keys.update(item.keys())
         return sorted(list(all_keys))
 
+def get_json(url: str) -> Dict:
+    """
+    Fetches JSON data from a given URL.
+
+    Args:
+        url (str): The URL to fetch JSON data from.
+
+    Returns:
+        Dict: The JSON response parsed as a dictionary.
+
+    Raises:
+        requests.exceptions.RequestException: For network-related errors.
+        ValueError: If the response content is not valid JSON.
+    """
+    response = requests.get(url)
+    response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
+    return response.json()
+
 
 if __name__ == "__main__":
     print("--- Self-testing access_nested_map ---")
@@ -145,3 +164,4 @@ if __name__ == "__main__":
     print(f"All unique keys: {all_keys} -> {'PASSED' if test_keys_passed else 'FAILED'}")
 
     print("\nAll self-tests completed.")
+
