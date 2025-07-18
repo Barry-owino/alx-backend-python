@@ -1,12 +1,16 @@
 from django.db import models
-
-# Create your models here.
-
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+import uuid
 
 # 1. Custom User model
 class CustomUser(AbstractUser):
+    user_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+
     profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
 
