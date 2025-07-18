@@ -1,6 +1,5 @@
 from django.shortcuts import render
-
-# Create your views here.
+from rest_framework import filters
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +14,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['participants__username', 'participants__email']
 
     def get_queryset(self):
         # Only show conversations that include the current user
@@ -30,6 +31,9 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['message_body', 'sender__username']
+
 
     def get_queryset(self):
         # Only return messages from conversations the user is part of
