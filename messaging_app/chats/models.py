@@ -19,6 +19,7 @@ class CustomUser(AbstractUser):
 
 # 2. Conversation model
 class Conversation(models.Model):
+    conversation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
     participants = models.ManyToManyField(CustomUser, related_name='conversations')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -27,10 +28,13 @@ class Conversation(models.Model):
 
 # 3. Message model
 class Message(models.Model):
+    message_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
     text = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+    message_body = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
     def __str__(self):
