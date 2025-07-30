@@ -17,6 +17,7 @@ Including another URLconf
 from rest_framework_nested.routers import DefaultRouter, NestedDefaultRouter
 from django.urls import path, include
 from .views import ConversationViewSet, MessageViewSet
+from rest_framework_simplejwt.views import TokenObtainPariView, TokenRefreshView
 
 # Root router for conversations
 router = DefaultRouter()
@@ -29,5 +30,9 @@ nested_router.register(r'messages', MessageViewSet, basename='conversation-messa
 urlpatterns = [
     path('', include(router.urls)),
     path('', include(nested_router.urls)),
+    path('admin/', admin.site.urls),
+    path('api/', include('chats.urls')),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
