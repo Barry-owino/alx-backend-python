@@ -2,6 +2,8 @@
 
 import logging
 from datetime import datetime
+from django.http import HttpResponseForbidden
+from collections import defaultdict
 
 class RequestLoggingMiddleware:
     def __init__(self, get_response):
@@ -25,10 +27,6 @@ class RequestLoggingMiddleware:
         # Continue processing request
         response = self.get_response(request)
         return response
-
-import logging
-from datetime import datetime
-from django.http import HttpResponseForbidden
 
 # Existing middleware
 class RequestLoggingMiddleware:
@@ -71,3 +69,36 @@ class RestrictAccessByTimeMiddleware:
         response = self.get_response(request)
         return response
 
+class OffensiveLanguageMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        # Track messages per IP: {ip: [timestamps]}
+        self.ip_message_times = defaultdict(list)
+        self.limit = 5          # max messages
+        self.time_window = 60   # time window in seconds (1 minute)
+
+    def __call__(self, request):
+        # Only count POST requests (sending messages)
+        if request.method == "POST" and request.path.startswith("/chat/"):
+            ip = self.get_client_ip(request)
+            now = time.time()
+            # Keep only timestamps within the last minute
+            self.ip_message_times[ip] = [t for t in self.ip_message_times[ip] if now - t < self.time_window]
+
+            if len(self.ip_message_times[ip]) >= self.limit:
+                return HttpResponseForbidden("Message limit exceeded. Try again later.")
+
+            # Record this message timestamp
+            self.ip_message_times[ip].append(now)
+
+        response = self.get_response(request)
+        return response
+
+    def get_client_ip(self, request):
+        # Standard method to get client IP
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
