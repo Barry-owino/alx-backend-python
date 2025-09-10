@@ -12,3 +12,6 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'message', 'timestamp', 'read')
     list_filter = ('user', 'read', 'timestamp')
 
+@admin.register(MessageHistory)
+class MessageHistoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'message', 'old_content', 'edited_at')
