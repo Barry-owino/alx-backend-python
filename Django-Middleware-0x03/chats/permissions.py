@@ -1,3 +1,4 @@
+from rest_framework.permissions import BasePermission
 from rest_framework import permissions
 from .models import Conversation
 
@@ -17,4 +18,13 @@ class IsParticipantOrReadOnly(permissions.BasePermission):
             return request.user in obj.conversation.participants.all()
 
         return False
+
+
+class IsParticipantOfConversation(BasePermission):
+    """
+    Only participants of a conversation can access it.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return request.user in obj.participants.all()
 
