@@ -1,7 +1,7 @@
-# messaging/views.py
 from django.shortcuts import redirect
 from django.contrib.auth import get_user_model, logout
 from django.contrib import messages
+from messaging.models import Message
 from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
@@ -16,3 +16,6 @@ def delete_user(request):
         return redirect("home")  # redirect to home page or landing page
     return render(request, "messaging/delete_user.html")
 
+messages = Message.objects.filter(parent_message__isnull=True) \
+    .select_related('sender', 'receiver') \
+    .prefetch_related('replies')
