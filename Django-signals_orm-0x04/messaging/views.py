@@ -49,3 +49,9 @@ def inbox(request):
 
     return render(request, 'messaging/inbox.html', {'threaded_data': threaded_data})
 
+
+@login_required
+def unread_inbox(request):
+    unread_messages = Message.unread.for_user(request.user).select_related('sender')
+
+    return render(request, 'messaging/unread_inbox.html', {'messages': unread_messages})
