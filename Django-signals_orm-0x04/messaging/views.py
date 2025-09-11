@@ -1,4 +1,4 @@
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect
 from django.contrib.auth import get_user_model, logout
 from django.contrib import messages
 from messaging.models import Message
@@ -32,10 +32,6 @@ def get_threaded_replies(message):
 
 @login_required
 def inbox(request):
-    """
-    Fetches all top-level messages sent by the logged-in user
-    with optimized queries and nested threaded replies.
-    """
     top_messages = Message.objects.filter(sender=request.user, parent_message__isnull=True) \
         .select_related('sender', 'receiver') \
         .prefetch_related('replies')
