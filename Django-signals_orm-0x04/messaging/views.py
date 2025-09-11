@@ -50,7 +50,7 @@ def inbox(request):
 def unread_inbox(request):
     unread_messages = (
         Message.unread
-        .for_user(request.user)
+        .unread_for_user(request.user)
         .select_related('sender')
         .only('id', 'sender', 'content', 'timestamp', 'parent_message')
     )
