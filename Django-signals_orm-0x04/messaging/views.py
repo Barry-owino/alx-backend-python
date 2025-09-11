@@ -16,6 +16,36 @@ def delete_user(request):
         return redirect("home")  # redirect to home page or landing page
     return render(request, "messaging/delete_user.html")
 
-messages = Message.objects.filter(parent_message__isnull=True) \
-    .select_related('sender', 'receiver') \
-    .prefetch_related('replies')
+def get_threaded_replies(message):
+    """
+    Recursively fetch all replies to a message
+    and return them in a nested structure.
+    """
+    replies = []
+    for reply in message.replies.all().select_related('sender', 'receiver'):
+        replies.append({
+            'message': reply,
+            'replies': get_threaded_replies(reply)
+        })
+    return replies
+
+
+@login_required
+def inbox(request):
+    """
+    Fetches all top-level messages sent by the logged-in user
+    with optimized queries and nested threaded replies.
+    """
+    top_messages = Message.objects.filter(sender=request.user, parent_message__isnull=True) \
+        .select_related('sender', 'receiver') \
+        .prefetch_related('replies')
+
+    threaded_data = []
+    for msg in top_messages:
+        threaded_data.append({
+            'message': msg,
+            'replies': get_threaded_replies(msg)
+        })
+
+    return render(request, 'messaging/inbox.html', {'threaded_data': threaded_data})
+
