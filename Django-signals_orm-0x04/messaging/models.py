@@ -10,6 +10,7 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     edited = models.BooleanField(default=False)
+    parent_message = models.ForeignKey('self', related_name='replies', null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"From {self.sender} to {self.receiver}: {self.content[:20]}"
